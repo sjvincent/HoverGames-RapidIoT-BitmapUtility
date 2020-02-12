@@ -1,0 +1,19 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <Nullable>enable</Nullable>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>netcoreapp3.1</TargetFramework>
+    <AssemblyVersion>1.0.0.0</AssemblyVersion>
+    <Description>Command line utility to create code files from bitmaps for an NXP Rapid IoT based Atmosphere IoT project. This utility can also be used to extract bitmaps from the existing Atmosphere IoT code files.</Description>
+    <Authors>Stewart Vincent</Authors>
+    <Company />
+    <Product>HoverGames</Product>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.Extensions.CommandLineUtils" Version="1.1.1" />
+    <PackageReference Include="System.Drawing.Common" Version="4.7.0" />
+  </ItemGroup>
+
+</Project>
