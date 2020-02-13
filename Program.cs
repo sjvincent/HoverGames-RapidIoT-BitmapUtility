@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.IO;
 using System.Reflection;
+using System.Runtime.InteropServices;
 using Microsoft.Extensions.CommandLineUtils;
 
 namespace HoverGames.RapidIoT.BitmapUtility
@@ -41,6 +42,7 @@ namespace HoverGames.RapidIoT.BitmapUtility
                 CommandOption codeCommandOption = x.Option("-c|--code", "Code folder path", CommandOptionType.SingleValue);
                 CommandOption outputCommandOption = x.Option("-o|--output", "Output folder path", CommandOptionType.SingleValue);
                 CommandOption replaceCommandOption = x.Option("-r|--replace", "Replace existing files", CommandOptionType.NoValue);
+                CommandOption silentCommandOption = x.Option("-s|--silent", "No file messages", CommandOptionType.NoValue);
 
                 x.OnExecute(() =>
                 {
@@ -64,7 +66,7 @@ namespace HoverGames.RapidIoT.BitmapUtility
                     if (string.IsNullOrWhiteSpace(codeFolderPath) || string.IsNullOrWhiteSpace(outputFolderPath))
                         x.ShowHelp();
                     else
-                        CreateBitmapFiles(codeFolderPath, outputFolderPath, replaceCommandOption.HasValue());
+                        CreateBitmapFiles(codeFolderPath, outputFolderPath, replaceCommandOption.HasValue(), silentCommandOption.HasValue() ? null : x.Out);
 
                     return 0;
                 });
@@ -81,6 +83,7 @@ namespace HoverGames.RapidIoT.BitmapUtility
                 CommandOption bitmapCommandOption = x.Option("-b|--bitmap", "Bitmap file path", CommandOptionType.SingleValue);
                 CommandOption outputCommandOption = x.Option("-o|--output", "Output file path", CommandOptionType.SingleValue);
                 CommandOption replaceCommandOption = x.Option("-r|--replace", "Replace existing file", CommandOptionType.NoValue);
+                CommandOption silentCommandOption = x.Option("-s|--silent", "No file mesages", CommandOptionType.NoValue);
 
                 x.OnExecute(() =>
                 {
@@ -104,7 +107,7 @@ namespace HoverGames.RapidIoT.BitmapUtility
                     if (string.IsNullOrWhiteSpace(bitmapFilePath) || string.IsNullOrWhiteSpace(outputFilePath))
                         x.ShowHelp();
                     else
-                        CreateCodeFile(bitmapFilePath, outputFilePath, replaceCommandOption.HasValue());
+                        CreateCodeFile(bitmapFilePath, outputFilePath, replaceCommandOption.HasValue(), silentCommandOption.HasValue() ? null : x.Out);
 
                     return 0;
                 });
@@ -118,6 +121,10 @@ namespace HoverGames.RapidIoT.BitmapUtility
             {
                 commandLineApplication.Out.WriteLine(ex.Message);
             }
+            catch (Exception ex)
+            {
+                commandLineApplication.Out.WriteLine(ex.Message);
+            }
         }
 
         /// <summary>
@@ -126,9 +133,10 @@ namespace HoverGames.RapidIoT.BitmapUtility
         /// <param name="codeFolderPath">Path to a folder that contains code files.</param>
         /// <param name="outputFolderPath">Path to a folder that will contain the created bitmap files.</param>
         /// <param name="replace">Flag to indicate if files should be replaced if they already exist. Otherwise existing files will not be overwritten.</param>
+        /// <param name="textWriter">TextWriter for messages about files.</param>
         /// <exception cref="ArgumentException"/>
         /// <exception cref="ArgumentNullException"/>
-        private static void CreateBitmapFiles(string codeFolderPath, string outputFolderPath, bool replace = false)
+        private static void CreateBitmapFiles(string codeFolderPath, string outputFolderPath, bool replace = false, TextWriter? textWriter = null)
         {
             if (codeFolderPath == null)
                 throw new ArgumentNullException(nameof(codeFolderPath));
@@ -158,7 +166,25 @@ namespace HoverGames.RapidIoT.BitmapUtility
                     FileInfo targetFileInfo = new FileInfo(Path.Combine(targetDirectoryInfo.FullName, $"{fileInfo.Name}.bmp"));
 
                     if (replace || !targetFileInfo.Exists)
-                        WriteBitmapFile(bytes, targetFileInfo);
+                    {
+                        try
+                        {
+                            WriteBitmapFile(bytes, targetFileInfo);
+
+                            if (targetFileInfo.Exists)
+                                textWriter?.WriteLine($"File replaced: {targetFileInfo.FullName}");
+                            else
+                                textWriter?.WriteLine($"File created:  {targetFileInfo.FullName}");
+                        }
+                        catch (Exception ex)
+                        {
+                            textWriter?.WriteLine($"File error:    {targetFileInfo.FullName}\r\n\t{ex.Message}");
+                        }
+                    }
+                    else
+                    {
+                        textWriter?.WriteLine($"File skipped:  {targetFileInfo.FullName}");
+                    }
                 }
             }
         }
@@ -169,9 +195,10 @@ namespace HoverGames.RapidIoT.BitmapUtility
         /// <param name="bitmapFilePath">Path to a file that contains a bitmap file.</param>
         /// <param name="outputFilePath">Path to a file that will contain the created code file.</param>
         /// <param name="replace">Flag to indicate if file should be replaced if it already exists. Otherwise existing file will not be overwritten.</param>
+        /// <param name="textWriter">TextWriter for messages about files.</param>
         /// <exception cref="ArgumentException"/>
         /// <exception cref="ArgumentNullException"/>
-        private static void CreateCodeFile(string bitmapFilePath, string outputFilePath, bool replace = false)
+        private static void CreateCodeFile(string bitmapFilePath, string outputFilePath, bool replace = false, TextWriter? textWriter = null)
         {
             if (bitmapFilePath == null)
                 throw new ArgumentNullException(nameof(bitmapFilePath));
@@ -192,7 +219,25 @@ namespace HoverGames.RapidIoT.BitmapUtility
             byte[] bytes = ReadBitmapFile(sourceFileInfo);
 
             if (replace || !targetFileInfo.Exists)
-                WriteCodeFile(bytes, targetFileInfo);
+            {
+                try
+                {
+                    WriteCodeFile(bytes, targetFileInfo);
+
+                    if (targetFileInfo.Exists)
+                        textWriter?.WriteLine($"File replaced: {targetFileInfo.FullName}");
+                    else
+                        textWriter?.WriteLine($"File created:  {targetFileInfo.FullName}");
+                }
+                catch (Exception ex)
+                {
+                    textWriter?.WriteLine($"File error:    {targetFileInfo.FullName}\r\n\t{ex.Message}");
+                }
+            }
+            else
+            {
+                textWriter?.WriteLine($"File skipped:  {targetFileInfo.FullName}");
+            }
         }
 
         /// <summary>
